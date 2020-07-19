@@ -4,7 +4,7 @@
     Given a non-negative bulk RNA expression matrix B \in R_+^{m x n}, 
     where each row i is a gene, each column j is a tumor sample, 
     our goal is to infer an expression profile matrix C \in R_+^{m x k}, 
-    where each column $$l$$ is a cell community, 
+    where each column l is a cell community, 
     and a fraction matrix F \in R_+^{k x n}, such that:
       B ~= C F.
 

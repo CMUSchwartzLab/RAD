@@ -2,14 +2,21 @@
 
 ## Introduction
 
-RAD is a toolkit that unmixes bulk tumor samples. Given a non-negative bulk RNA expression matrix $$B \in R_{+}^{m \times n}$$, where each row $$i$$ is a gene, each column $$j$$ is a tumor sample, our goal is to infer an expression profile matrix $$C \in R_{+}^{m \times k}$$, where each column $$l$$ is a cell community, and a fraction matrix $$F \in R_{+}^{k \times n}$$, such that:
-$$B \approx C F$$.
+RAD is a toolkit that unmixes bulk tumor samples. Given a non-negative bulk RNA expression matrix B \in R_+^{m x n}, where each row i is a gene, each column j is a tumor sample, our goal is to infer an expression profile matrix C \in R_+^{m x k}, where each column l is a cell community, and a fraction matrix F \in R_+^{k x n}, such that:
+```
+  B ~= C F. 
+```
 To be more specific, RAD solves the following problem:
-$$\min_{C, F} \| B - C F \|_{Fr}^2,$$ such that:
-$$C_{i,l} \geq 0, i = 1,...,m, l=1,...,k,$$
- $$F_{l,j} \geq 0, l=1,...,k, j = 1,...,n,$$
- $$\sum_{lj} = 1, j = 1,...,n.$$
- 
+```
+min_{C, F} || B - C F ||_{Fr}^2, 
+
+      s.t. C_{il} >= 0,              i=1,...,m, l=1,...,k,
+
+           F_{lj} >= 0,              l=1,...,k, j=1,...,n,
+
+           \sum_{l=1}^{k} F_{lj} = 1,           j=1,...,n.
+```
+
 RAD has the following features and advantages:
 * `compress_module`: Integrate gene module knowledge to reduce noise.
 * `estimate_number`: Estimate the number of cell populations automatically.

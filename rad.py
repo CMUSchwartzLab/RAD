@@ -1,12 +1,21 @@
-""" Robust and Accurate Deconvolution (RAD) toolkit
+""" Robust and Accurate Deconvolution (RAD) is a toolkit that unmixes 
+  bulk tumor samples. It aims to solve the following problem:
+    
+    Given a non-negative bulk RNA expression matrix B \in R_+^{m x n}, 
+    where each row i is a gene, each column j is a tumor sample, 
+    our goal is to infer an expression profile matrix C \in R_+^{m x k}, 
+    where each column $$l$$ is a cell community, 
+    and a fraction matrix F \in R_+^{k x n}, such that:
+      B ~= C F.
 
   main APIs:
-    compress_module
-    estimate_number
-    estimate_clones
-    estimate_marker
+    compress_module: integrate gene module knowledge to reduce noise
+    estimate_number: estimate the number of cell populations automatically
+    estimate_clones: utilize core RAD algorithm to unmix the cell populations accurately and robustly
+    estimate_marker: estimate other biomarkers of cell populations given bulk marker data
 
 """
+#TODO: enable random seed as input param
 
 import random
 import time
@@ -52,14 +61,18 @@ def compress_module(B, module):
 # https://github.com/scikit-learn/scikit-learn/blob/7389dba/sklearn/decomposition/nmf.py#L699
 
 def _normalize_frac(F):
+  """ normalize fraction matrix F so that each sums up to 1
+  
+  """
+  
   col_sums = F.sum(axis=0)
+  
   return F / col_sums[np.newaxis, :]
 
 
-def _initialize_nmf(B, n_components, init=None, eps=1e-6,
-                    random_state=None):
-    """ Algorithms for NMF initialization.
-    Computes an initial guess for the non-negative
+def _initialize_nmf(B, n_components, eps=1e-6, random_state=None):
+    """ algorithms for NMF initialization
+    computes an initial guess for the non-negative
     rank k matrix approximation for B: B = CF
     
     Parameters
@@ -68,18 +81,12 @@ def _initialize_nmf(B, n_components, init=None, eps=1e-6,
         The data matrix to be decomposed.
     n_components : integer
         The number of components desired in the approximation.
-    init :  None | 'random' | 'nndsvd' | 'nndsvda' | 'nndsvdar'
-        Method used to initialize the procedure.
-        Default: 'nndsvd' if n_components < n_features, otherwise 'random'.
-        Valid options:
-        - 'random': non-negative random matrices, scaled with:
-            sqrt(B.mean() / n_components)
     eps : float
         Truncate all values less then this in output to zero.
     random_state : int, RandomState instance or None, optional, default: None
         If int, random_state is the seed used by the random number generator;
         If None, the random number generator is the RandomState instance used
-        by `np.random`. Used when ``random`` == 'nndsvdar' or 'random'.
+        by `np.random`. Used when ``random`` == "nndsvdar" or "random".
         
     Returns
     -------
@@ -105,7 +112,7 @@ def _initialize_nmf(B, n_components, init=None, eps=1e-6,
     F = avg * rng.randn(n_components, n_features)
     C = avg * rng.randn(n_samples, n_components)
     # we do not write np.abs(F, out=F) to stay compatible with
-    # numpy 1.5 and earlier where the 'out' keyword is not
+    # numpy 1.5 and earlier where the "out" keyword is not
     # supported as a kwarg on ufuncs
 
     np.abs(C, C)
@@ -211,25 +218,36 @@ def _fit_multiplicative_update_mask(B, M, C, F, max_iter=200, tol=1e-4, verbose=
     return C, F, n_iter, previous_error
 
 
+# the coordinate descent phase borrows code from cvxopt:
+# https://cvxopt.org/userguide/coneprog.html
 def _cvxopt_solve_qp(P, q, G=None, h=None, A=None, b=None):
-    P = .5 * (P + P.T)  # make sure P is symmetric
-    args = [cvxopt.matrix(P), cvxopt.matrix(q)]
-    if G is not None:
-        args.extend([cvxopt.matrix(G), cvxopt.matrix(h)])
-        if A is not None:
-            args.extend([cvxopt.matrix(A), cvxopt.matrix(b)])
-    cvxopt.solvers.options['show_progress'] = False
-    sol = cvxopt.solvers.qp(*args)
-    if 'optimal' not in sol['status']:
-        return None
-    return np.array(sol['x']).reshape((P.shape[1],))
+  """ solve the QP problem of
+  
+    minimize_x 1/2 x^T P x + q^T x
+    subject to G x <= h
+               A x = b
+  
+  """
+  
+  P = .5 * (P + P.T)  # make sure P is symmetric
+  args = [cvxopt.matrix(P), cvxopt.matrix(q)]
+  if G is not None:
+    args.extend([cvxopt.matrix(G), cvxopt.matrix(h)])
+    if A is not None:
+      args.extend([cvxopt.matrix(A), cvxopt.matrix(b)])
+  cvxopt.solvers.options["show_progress"] = False
+  sol = cvxopt.solvers.qp(*args)
+  if "optimal" not in sol["status"]:
+    return None
+  
+  return np.array(sol["x"]).reshape((P.shape[1],))
 
 
 def _quad_prog_BF2C(B, F, M, max_val=2**19):
   """ Solve the QP problem of
   
-    Minimize_C ||B - C F||_2^2
-    Subject to C >= 0
+    minimize_C ||B - C F||_2^2
+    subject to C >= 0
                C <= max_val
                
   """
@@ -269,7 +287,7 @@ def _quad_prog_BF2C(B, F, M, max_val=2**19):
 
 
 def estimate_marker(B, F, M=None, max_val=2**19):
-  """ Estimate biomarkers of individual components
+  """ estimate biomarkers of individual components
   
     B_P, F -> C_P or
     B, F -> C
@@ -287,8 +305,8 @@ def estimate_marker(B, F, M=None, max_val=2**19):
 def _quad_prog_BC2F(B, C, M):
   """ Solve the QP problem of
   
-    Minimize_F ||B - C F||_2^2
-    Subject to F >= 0
+    minimize_F ||B - C F||_2^2
+    subject to F >= 0
                \sum_i F_ij =1, for j=1,2,...,num_gene
       
   """
@@ -402,7 +420,7 @@ def estimate_clones(B, k, M=None, n_trial=10, verbose=True):
   if M is None:
     M = np.ones(B.shape)
     
-  min_sum_InPr, min_C, min_F = float('inf'), 0, 0
+  min_sum_InPr, min_C, min_F = float("inf"), 0, 0
 
   for _ in range(n_trial):
     C, F, _, _ = rad_warmstart(B, M, k, verbose=verbose)
@@ -480,7 +498,7 @@ def estimate_number(B, max_comp=10, n_splits=20, plot_cv_error=True):
 
       #print("fold=%3d/%3d, dim_k=%2d, train=%.2e, test=%.2e"%(idx_fold, n_splits, dim_k, l2_train, l2_test))
       
-  k = n_comp[np.argmin(np.mean(results['test_error'], axis=1))]
+  k = n_comp[np.argmin(np.mean(results["test_error"], axis=1))]
   
   if plot_cv_error:
     plot_cv(results,inputstr="test_error",deno=np.sum(np.multiply(B, B))/B.shape[0]/B.shape[1])
@@ -518,9 +536,9 @@ def plot_cv(results, inputstr="test_error", deno=1.0):
 
   idx_min = np.argmin(avg_test_error)
   
-  #print('min:k=%d,mse=%f'%(n_comp[idx_min], avg_test_error[idx_min]))
+  #print("min:k=%d,mse=%f"%(n_comp[idx_min], avg_test_error[idx_min]))
 
-  if inputstr == 'test_error':
+  if inputstr == "test_error":
     yl = "Normalized CV MSE"
   else:
     yl = "Normalized train MSE"

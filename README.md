@@ -2,7 +2,7 @@
 
 ## Introduction
 
-RAD is a toolkit that unmixes bulk tumor samples. Given a non-negative bulk RNA expression matrix B \in R_+^{m x n}, where each row i is a gene, each column j is a tumor sample, our goal is to infer an expression profile matrix C \in R_+^{m x k}, where each column l is a cell community, and a fraction matrix F \in R_+^{k x n}, such that:
+RAD is a toolkit that unmixes bulk tumor samples. Given a non-negative bulk RNA expression matrix `B \in R_+^{m x n}`, where each row `i` is a gene, each column `j` is a tumor sample, our goal is to infer an expression profile matrix `C \in R_+^{m x k}`, where each column `l` is a cell community, and a fraction matrix `F \in R_+^{k x n}`, such that:
 ```
   B ~= C F. 
 ```
@@ -32,7 +32,7 @@ The code runs on Python 3. You will need to install the additional Python packag
 
 ## Tutorial
 
-You can find a brief tutorial in `tutorial.py`.
+You can find a brief tutorial with code and output in the jupyter notebook `tutorial.ipynb`.
 
 ## Citation
 

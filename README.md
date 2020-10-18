@@ -58,5 +58,5 @@ Yifeng Tao, Haoyun Lei, Xuecong Fu, Adrian V. Lee, Jian Ma, and Russell Schwartz
 We compared RAD with a few other methods in the paper, you can find the links to these algorithms below:
 * Geometric Unmixing: [Paper](https://bmcbioinformatics.biomedcentral.com/articles/10.1186/1471-2105-11-42), [Code](http://www.cs.cmu.edu/~russells/software/unmixing/)
 * LinSeed: [Paper](https://www.nature.com/articles/s41467-019-09990-5), [Code](https://github.com/ctlab/LinSeed)
-* NND: [Paper](https://link.springer.com/chapter/10.1007%2F978-3-030-35210-3_1), [Code](https://github.com/CMUSchwartzLab/BrM-Phylo)
+* NND: [Paper](https://www.frontiersin.org/articles/10.3389/fphys.2020.01055/full), [Code](https://github.com/CMUSchwartzLab/NND)
 
